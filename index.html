@@ -11,6 +11,38 @@
     <style>
       /* Garantir que a fonte Inter seja aplicada no body */
       body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+
+      /* Animação de entrada do Toast */
+      @keyframes slideInRight {
+        from {
+          opacity: 0;
+          transform: translateX(100%) translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0) translateY(0);
+        }
+      }
+
+      /* Animação de saída do Toast */
+      @keyframes slideOutRight {
+        from {
+          opacity: 1;
+          transform: translateX(0) translateY(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateX(100%) translateY(-20px);
+        }
+      }
+
+      .toast-enter {
+        animation: slideInRight 0.3s ease-out forwards;
+      }
+
+      .toast-exit {
+        animation: slideOutRight 0.3s ease-in forwards;
+      }
     </style>
   </head>
   <body class="antialiased bg-gray-50">
@@ -89,6 +121,42 @@
     
     <!-- Script: renderização dinâmica das lojas -->
     <script>
+      // Função para exibir notificações Toast
+      function mostrarNotificacao(mensagem, tipo = 'sucesso') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        // Definir cores baseadas no tipo
+        const cores = {
+          sucesso: 'bg-green-500',
+          erro: 'bg-red-500'
+        };
+
+        const bgClass = cores[tipo] || cores.sucesso;
+
+        // Criar elemento do toast
+        const toast = document.createElement('div');
+        toast.className = `${bgClass} text-white px-6 py-3 rounded-md shadow-lg pointer-events-auto toast-enter`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'polite');
+        toast.textContent = mensagem;
+
+        // Adicionar ao container
+        container.appendChild(toast);
+
+        // Animar saída e remover após 3 segundos
+        setTimeout(() => {
+          toast.classList.remove('toast-enter');
+          toast.classList.add('toast-exit');
+
+          setTimeout(() => {
+            toast.remove();
+          }, 300); // tempo da animação de saída
+        }, 3000); // 3 segundos visível
+      }
+    </script>
+
+    <script>
       // Array de comércios: carregar do localStorage se existir, senão usar valores padrão
       let comercios = (function() {
         const chave = 'meus-comercios';
@@ -135,7 +203,10 @@
         ];
       })();
 
-      // Função que renderiza a lista de lojas no grid
+  // Índice de edição (null quando criando nova loja)
+  let indiceEdicao = null;
+
+  // Função que renderiza a lista de lojas no grid
       function renderizarLojas(lista) {
         const grid = document.getElementById('lojas-grid');
         if (!grid) return;
@@ -152,9 +223,13 @@
           const card = `
             <article class="bg-white rounded-lg overflow-hidden shadow transition-shadow duration-200 hover:shadow-lg">
               <div class="relative">
-                <img src="${c.imagem}" alt="${c.nome}" class="w-full h-48 object-cover">
+                <img src="${c.imagem}" alt="${c.nome}" onerror="this.onerror=null; this.src='https://via.placeholder.com/400x200?text=Sem+Foto';" class="w-full h-48 object-cover">
                 <span class="absolute top-3 left-3 bg-white/90 text-indigo-700 text-xs font-semibold uppercase px-2 py-1 rounded">${c.categoria}</span>
-                <button onclick="deletarLoja(${idx})" class="absolute top-3 right-3 text-red-500 hover:text-red-700 bg-white/80 rounded-full px-2 py-1 text-sm" aria-label="Excluir loja">🗑️</button>
+                <div class="absolute top-3 right-3 flex items-center space-x-2">
+                  <button onclick="compartilharLoja(${idx})" class="text-blue-500 hover:text-blue-700 bg-white/80 rounded-full px-2 py-1 text-sm" aria-label="Compartilhar loja">🔗</button>
+                  <button onclick="editarLoja(${idx})" class="text-yellow-500 hover:text-yellow-700 bg-white/80 rounded-full px-2 py-1 text-sm" aria-label="Editar loja">✏️</button>
+                  <button onclick="deletarLoja(${idx})" class="text-red-500 hover:text-red-700 bg-white/80 rounded-full px-2 py-1 text-sm" aria-label="Excluir loja">🗑️</button>
+                </div>
               </div>
 
               <div class="p-4">
@@ -168,6 +243,20 @@
                 </div>
 
                 <p class="mt-4 text-sm text-gray-500">${c.endereco}</p>
+
+                <!-- Ações: WhatsApp e Rotas -->
+                <div class="mt-4 flex items-center gap-3">
+                  ${(() => {
+                    // placeholder: will be replaced in template context
+                    return '';
+                  })()}
+                  <a href="${(c.telefone ? ('https://wa.me/55' + c.telefone.replace(/\D/g, '')) : '#')}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-3 py-2 rounded-md bg-green-500 hover:bg-green-600 text-white text-sm">
+                    Zap
+                  </a>
+                  <a href="${('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(c.endereco || ''))}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-3 py-2 rounded-md bg-blue-500 hover:bg-blue-600 text-white text-sm">
+                    Ir
+                  </a>
+                </div>
               </div>
             </article>
           `;
@@ -240,14 +329,29 @@
           });
         }
 
-        // Modal: abrir/fechar quando clicar no botão da navbar ou no cancelar
+        // Modal: abrir/fechar quando clicar no botão da navbar, FAB ou no cancelar
         const btnCadastrar = document.getElementById('btn-cadastrar');
+        const fabCadastrar = document.getElementById('fab-cadastrar');
         const modal = document.getElementById('modal-cadastro');
         const modalCancel = document.getElementById('modal-cancel');
 
         if (btnCadastrar && modal) {
           btnCadastrar.addEventListener('click', (ev) => {
             ev.preventDefault();
+            // resetar edição
+            indiceEdicao = null;
+            const title = document.getElementById('modal-title');
+            if (title) title.textContent = 'Cadastrar Nova Loja';
+            modal.classList.remove('hidden');
+          });
+        }
+
+        if (fabCadastrar && modal) {
+          fabCadastrar.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            indiceEdicao = null;
+            const title = document.getElementById('modal-title');
+            if (title) title.textContent = 'Cadastrar Nova Loja';
             modal.classList.remove('hidden');
           });
         }
@@ -283,6 +387,67 @@
         }
         // re-renderizar
         renderizarLojas(comercios);
+        // mostrar notificação
+        mostrarNotificacao('Loja removida.', 'erro');
+      }
+
+      // Função global para compartilhar uma loja
+      function compartilharLoja(index) {
+        if (typeof index !== 'number' || index < 0 || index >= comercios.length) return;
+        const loja = comercios[index];
+
+        // Verificar se o navegador suporta Web Share API
+        if (navigator.share) {
+          navigator.share({
+            title: loja.nome,
+            text: 'Olha essa loja no Guia do Bairro!',
+            url: window.location.href
+          }).catch((err) => {
+            if (err.name !== 'AbortError') {
+              console.error('Erro ao compartilhar:', err);
+            }
+          });
+        } else {
+          // Fallback: copiar para a área de transferência
+          const textoParaCopiar = `Confira a loja ${loja.nome}! ${window.location.href}`;
+          navigator.clipboard.writeText(textoParaCopiar).then(() => {
+            mostrarNotificacao('Link copiado!', 'sucesso');
+          }).catch((err) => {
+            console.error('Erro ao copiar para a área de transferência:', err);
+            mostrarNotificacao('Erro ao copiar o link.', 'erro');
+          });
+        }
+      }
+      
+      // Função para editar uma loja: abre o modal com os dados preenchidos
+      function editarLoja(index) {
+        if (typeof index !== 'number' || index < 0 || index >= comercios.length) return;
+        const loja = comercios[index];
+        const modal = document.getElementById('modal-cadastro');
+        if (!modal) return;
+        const modalForm = modal.querySelector('form');
+        if (!modalForm) return;
+
+        // preencher campos
+        const nomeIn = modalForm.querySelector('input[name="nome"]');
+        const categoriaIn = modalForm.querySelector('select[name="categoria"]');
+        const imagemIn = modalForm.querySelector('input[name="imagem"]');
+        const enderecoIn = modalForm.querySelector('input[name="endereco"]');
+        const telefoneIn = modalForm.querySelector('input[name="telefone"]');
+
+        if (nomeIn) nomeIn.value = loja.nome || '';
+        if (categoriaIn) categoriaIn.value = loja.categoria || 'Alimentação';
+        if (imagemIn) imagemIn.value = loja.imagem || '';
+        if (enderecoIn) enderecoIn.value = loja.endereco || '';
+        if (telefoneIn) telefoneIn.value = loja.telefone || '';
+
+        // ajustar estado
+        indiceEdicao = index;
+        const title = document.getElementById('modal-title');
+        if (title) title.textContent = 'Editar Loja';
+
+        // abrir modal
+        modal.classList.remove('hidden');
       }
     </script>
 
@@ -303,8 +468,11 @@
           const categoria = (fd.get('categoria') || '').toString().trim();
           const imagem = (fd.get('imagem') || '').toString().trim();
           const endereco = (fd.get('endereco') || '').toString().trim();
+          const telefone = (fd.get('telefone') || '').toString().trim();
 
-          if (!nome) {
+          // Validação: Nome e Categoria são obrigatórios
+          if (!nome || !categoria) {
+            mostrarNotificacao('Preencha os campos obrigatórios!', 'erro');
             const primeiro = modalForm.querySelector('input[name="nome"]');
             if (primeiro) primeiro.focus();
             return;
@@ -315,10 +483,18 @@
             categoria,
             nota: '5.0',
             imagem: imagem || 'https://source.unsplash.com/800x600/?store',
-            endereco
+            endereco,
+            telefone: telefone || ''
           };
 
-          comercios.push(novo);
+          if (indiceEdicao === null) {
+            // criação
+            comercios.push(novo);
+          } else {
+            // edição: atualizar o item existente
+            comercios[indiceEdicao] = novo;
+          }
+
           try {
             localStorage.setItem('meus-comercios', JSON.stringify(comercios));
           } catch (e) {
@@ -328,6 +504,14 @@
 
           modal.classList.add('hidden');
           modalForm.reset();
+
+          // reset estado de edição
+          indiceEdicao = null;
+          const title = document.getElementById('modal-title');
+          if (title) title.textContent = 'Cadastrar Nova Loja';
+
+          // mostrar notificação
+          mostrarNotificacao('Loja salva com sucesso!', 'sucesso');
         });
       });
     </script>
@@ -336,18 +520,19 @@
     <div id="modal-cadastro" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
       <div class="bg-white rounded-lg shadow-lg w-full max-w-lg mx-4">
         <div class="px-6 py-4 border-b">
-          <h3 class="text-lg font-semibold text-gray-900">Cadastrar Nova Loja</h3>
+          <h3 id="modal-title" class="text-lg font-semibold text-gray-900">Cadastrar Nova Loja</h3>
         </div>
 
         <form class="px-6 py-6 space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Nome da Loja</label>
-            <input type="text" name="nome" class="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Nome da loja" />
+            <input type="text" name="nome" required class="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Nome da loja" />
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-            <select name="categoria" class="w-full border border-gray-200 rounded-md px-3 py-2 bg-white focus:outline-none">
+            <select name="categoria" required class="w-full border border-gray-200 rounded-md px-3 py-2 bg-white focus:outline-none">
+              <option></option>
               <option>Alimentação</option>
               <option>Serviços</option>
               <option>Pets</option>
@@ -364,6 +549,11 @@
             <input type="text" name="endereco" class="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none" placeholder="Rua, número, bairro" />
           </div>
 
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Telefone/WhatsApp</label>
+            <input inputmode="numeric" type="tel" name="telefone" class="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none" placeholder="(XX) 9XXXX-XXXX" />
+          </div>
+
           <div class="pt-4 border-t flex justify-end gap-3">
             <button id="modal-cancel" type="button" class="px-4 py-2 rounded-md bg-gray-200 text-gray-700">Cancelar</button>
             <button type="submit" class="px-4 py-2 rounded-md bg-blue-600 text-white">Salvar</button>
@@ -371,6 +561,13 @@
         </form>
       </div>
     </div>
+
+    <!-- Floating Action Button (FAB) para abrir modal de cadastro -->
+    <button id="fab-cadastrar" aria-label="Cadastrar Loja" class="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-indigo-600 text-white shadow-2xl flex items-center justify-center z-50 hover:bg-indigo-700">+
+    </button>
+
+    <!-- Container de Notificações Toast -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-3 pointer-events-none"></div>
 
     <!-- Footer -->
     <footer class="bg-gray-800 text-gray-100">
