@@ -1,0 +1,19 @@
+services:
+  api:
+    image: node:18-alpine
+    # Define a pasta de trabalho dentro do Docker
+    working_dir: /app
+    # Instala e roda o servidor olhando para o arquivo dentro da pasta
+    command: sh -c "npm install -g json-server && json-server --watch db.json --host 0.0.0.0 --port 3000 --bodyParser=false"
+    ports:
+      - "3000:3000"
+    volumes:
+      # AQUI ESTÁ A CORREÇÃO: Mapeamos a pasta atual (.) para a pasta /app do Docker
+      - ./:/app
+
+  web:
+    image: nginx:alpine
+    ports:
+      - "8050:80"
+    volumes:
+      - ./:/usr/share/nginx/html

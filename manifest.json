@@ -1,0 +1,53 @@
+{
+  "name": "Guia do Bairro",
+  "short_name": "GuiaLocal",
+  "description": "Diretório de comércio local — encontre lojas, serviços e ofertas da sua cidade",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "scope": "./",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/683/683033.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/683/683033.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["business", "shopping"],
+  "screenshots": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/683/683033.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/683/683033.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Cadastrar Loja",
+      "short_name": "Cadastrar",
+      "description": "Cadastre uma nova loja no Guia do Bairro",
+      "url": "./index.html?action=cadastrar",
+      "icons": [
+        {
+          "src": "https://cdn-icons-png.flaticon.com/512/683/683033.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

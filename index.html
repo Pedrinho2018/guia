@@ -4,6 +4,16 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>GuiaLocal — Diretório de Comércio Local</title>
+    <!-- Manifest para PWA -->
+    <link rel="manifest" href="./manifest.json">
+    <!-- Meta Tags para PWA -->
+    <meta name="theme-color" content="#2563eb">
+    <meta name="description" content="Diretório de comércio local — encontre lojas, serviços e ofertas da sua cidade">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GuiaLocal">
+    <!-- Ícone para iOS -->
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/683/683033.png">
     <!-- Google Font: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <!-- Tailwind CSS CDN (script) -->
@@ -157,56 +167,34 @@
     </script>
 
     <script>
-      // Array de comércios: carregar do localStorage se existir, senão usar valores padrão
-      let comercios = (function() {
-        const chave = 'meus-comercios';
-        const saved = localStorage.getItem(chave);
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed)) return parsed;
-          } catch (e) {
-            console.error('Erro ao parsear meus-comercios do localStorage:', e);
+      // URL da API
+      const API_URL = 'http://localhost:3000/comercios';
+
+      // Array de comércios (carregado da API)
+      let comercios = [];
+
+      // Índice de edição (null quando criando nova loja)
+      let indiceEdicao = null;
+
+      // Variável para armazenar imagem em Base64
+      let imagemBase64 = '';
+
+      // Função assíncrona para buscar lojas da API
+      async function buscarLojas() {
+        try {
+          const response = await fetch(API_URL);
+          if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
           }
+          comercios = await response.json();
+          renderizarLojas(comercios);
+        } catch (error) {
+          console.error('Erro ao buscar lojas:', error);
+          mostrarNotificacao('Erro ao conectar com a API.', 'erro');
         }
+      }
 
-        // valores padrão caso não exista no localStorage
-        return [
-          {
-            nome: 'Pizzaria Central',
-            categoria: 'Restaurante',
-            nota: '4.8',
-            imagem: 'https://source.unsplash.com/800x600/?pizza',
-            endereco: 'Rua Exemplo, 123 — Centro, SuaCidade'
-          },
-          {
-            nome: 'Mecânica Rápida',
-            categoria: 'Serviços',
-            nota: '4.6',
-            imagem: 'https://source.unsplash.com/800x600/?mechanic,car',
-            endereco: 'Av. das Oficinas, 45 — Bairro Motor'
-          },
-          {
-            nome: 'Café do Bairro',
-            categoria: 'Cafeteria',
-            nota: '4.9',
-            imagem: 'https://source.unsplash.com/800x600/?cafe',
-            endereco: 'Praça Central, 10 — Centro'
-          },
-          {
-            nome: 'Flor & Aroma',
-            categoria: 'Florista',
-            nota: '4.7',
-            imagem: 'https://source.unsplash.com/800x600/?flowers,shop',
-            endereco: 'Rua das Flores, 77 — Jardim'
-          }
-        ];
-      })();
-
-  // Índice de edição (null quando criando nova loja)
-  let indiceEdicao = null;
-
-  // Função que renderiza a lista de lojas no grid
+      // Função que renderiza a lista de lojas no grid
       function renderizarLojas(lista) {
         const grid = document.getElementById('lojas-grid');
         if (!grid) return;
@@ -218,17 +206,15 @@
         }
 
         lista.forEach(c => {
-          // Determinar índice da loja no array principal (comercios)
-          const idx = comercios.indexOf(c);
           const card = `
             <article class="bg-white rounded-lg overflow-hidden shadow transition-shadow duration-200 hover:shadow-lg">
               <div class="relative">
                 <img src="${c.imagem}" alt="${c.nome}" onerror="this.onerror=null; this.src='https://via.placeholder.com/400x200?text=Sem+Foto';" class="w-full h-48 object-cover">
                 <span class="absolute top-3 left-3 bg-white/90 text-indigo-700 text-xs font-semibold uppercase px-2 py-1 rounded">${c.categoria}</span>
                 <div class="absolute top-3 right-3 flex items-center space-x-2">
-                  <button onclick="compartilharLoja(${idx})" class="text-blue-500 hover:text-blue-700 bg-white/80 rounded-full px-2 py-1 text-sm" aria-label="Compartilhar loja">🔗</button>
-                  <button onclick="editarLoja(${idx})" class="text-yellow-500 hover:text-yellow-700 bg-white/80 rounded-full px-2 py-1 text-sm" aria-label="Editar loja">✏️</button>
-                  <button onclick="deletarLoja(${idx})" class="text-red-500 hover:text-red-700 bg-white/80 rounded-full px-2 py-1 text-sm" aria-label="Excluir loja">🗑️</button>
+                  <button onclick="compartilharLoja(${c.id})" class="text-blue-500 hover:text-blue-700 bg-white/80 rounded-full px-2 py-1 text-sm" aria-label="Compartilhar loja">🔗</button>
+                  <button onclick="editarLoja(${c.id})" class="text-yellow-500 hover:text-yellow-700 bg-white/80 rounded-full px-2 py-1 text-sm" aria-label="Editar loja">✏️</button>
+                  <button onclick="deletarLoja(${c.id})" class="text-red-500 hover:text-red-700 bg-white/80 rounded-full px-2 py-1 text-sm" aria-label="Excluir loja">🗑️</button>
                 </div>
               </div>
 
@@ -274,8 +260,8 @@
 
       // Renderizar ao carregar a página e configurar filtros
       window.addEventListener('DOMContentLoaded', () => {
-        // Renderizar inicialmente todos
-        renderizarLojas(comercios);
+        // Buscar lojas da API
+        buscarLojas();
 
         // Configurar botões de filtro
         const botoes = document.querySelectorAll('#filtros button');
@@ -374,27 +360,36 @@
     </script>
 
     <script>
-      // Função global para deletar uma loja pelo índice no array 'comercios'
-      function deletarLoja(index) {
-        if (typeof index !== 'number' || index < 0 || index >= comercios.length) return;
-        // remover do array
-        comercios.splice(index, 1);
-        // atualizar localStorage
+      // Função global para deletar uma loja pela API
+      async function deletarLoja(id) {
+        if (!id) return;
+        
         try {
-          localStorage.setItem('meus-comercios', JSON.stringify(comercios));
-        } catch (e) {
-          console.error('Erro ao salvar no localStorage após exclusão:', e);
+          const response = await fetch(`${API_URL}/${id}`, {
+            method: 'DELETE'
+          });
+
+          if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
+          }
+
+          // Atualizar lista local
+          comercios = comercios.filter(c => c.id !== id);
+          renderizarLojas(comercios);
+
+          // Mostrar notificação
+          mostrarNotificacao('Loja removida.', 'erro');
+        } catch (error) {
+          console.error('Erro ao deletar loja:', error);
+          mostrarNotificacao('Erro ao deletar a loja.', 'erro');
         }
-        // re-renderizar
-        renderizarLojas(comercios);
-        // mostrar notificação
-        mostrarNotificacao('Loja removida.', 'erro');
       }
 
       // Função global para compartilhar uma loja
-      function compartilharLoja(index) {
-        if (typeof index !== 'number' || index < 0 || index >= comercios.length) return;
-        const loja = comercios[index];
+      function compartilharLoja(id) {
+        if (!id) return;
+        const loja = comercios.find(c => c.id === id);
+        if (!loja) return;
 
         // Verificar se o navegador suporta Web Share API
         if (navigator.share) {
@@ -420,9 +415,11 @@
       }
       
       // Função para editar uma loja: abre o modal com os dados preenchidos
-      function editarLoja(index) {
-        if (typeof index !== 'number' || index < 0 || index >= comercios.length) return;
-        const loja = comercios[index];
+      function editarLoja(id) {
+        if (!id) return;
+        const loja = comercios.find(c => c.id === id);
+        if (!loja) return;
+
         const modal = document.getElementById('modal-cadastro');
         if (!modal) return;
         const modalForm = modal.querySelector('form');
@@ -442,7 +439,7 @@
         if (telefoneIn) telefoneIn.value = loja.telefone || '';
 
         // ajustar estado
-        indiceEdicao = index;
+        indiceEdicao = id;
         const title = document.getElementById('modal-title');
         if (title) title.textContent = 'Editar Loja';
 
@@ -452,7 +449,7 @@
     </script>
 
     <script>
-      // Handler adicional para o formulário do modal (seletor sem precisar alterar o HTML)
+      // Handler para o formulário do modal
       window.addEventListener('DOMContentLoaded', () => {
         const modal = document.getElementById('modal-cadastro');
         if (!modal) return;
@@ -460,13 +457,47 @@
         const modalForm = modal.querySelector('form');
         if (!modalForm) return;
 
-        modalForm.addEventListener('submit', (e) => {
+        // Evento para carregar imagem em Base64
+        const inputFoto = document.getElementById('input-foto');
+        if (inputFoto) {
+          inputFoto.addEventListener('change', (e) => {
+            const arquivo = e.target.files[0];
+            if (!arquivo) return;
+
+            // Validação: Verificar tamanho máximo (500KB)
+            const TAMANHO_MAXIMO = 500 * 1024; // 500KB em bytes
+            if (arquivo.size > TAMANHO_MAXIMO) {
+              alert('A imagem deve ter no máximo 500KB.');
+              e.target.value = ''; // Limpar input
+              imagemBase64 = ''; // Limpar variável
+              const previewContainer = document.getElementById('preview-container');
+              if (previewContainer) previewContainer.classList.add('hidden');
+              return;
+            }
+
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              // Salvar Base64 na variável global
+              imagemBase64 = reader.result;
+
+              // Mostrar preview
+              const previewContainer = document.getElementById('preview-container');
+              const previewImagem = document.getElementById('preview-imagem');
+              if (previewContainer && previewImagem) {
+                previewContainer.classList.remove('hidden');
+                previewImagem.src = imagemBase64;
+              }
+            };
+            reader.readAsDataURL(arquivo);
+          });
+        }
+
+        modalForm.addEventListener('submit', async (e) => {
           e.preventDefault();
 
           const fd = new FormData(modalForm);
           const nome = (fd.get('nome') || '').toString().trim();
           const categoria = (fd.get('categoria') || '').toString().trim();
-          const imagem = (fd.get('imagem') || '').toString().trim();
           const endereco = (fd.get('endereco') || '').toString().trim();
           const telefone = (fd.get('telefone') || '').toString().trim();
 
@@ -478,40 +509,79 @@
             return;
           }
 
-          const novo = {
+          const lojaData = {
             nome,
             categoria,
             nota: '5.0',
-            imagem: imagem || 'https://source.unsplash.com/800x600/?store',
+            imagem: imagemBase64 || 'https://via.placeholder.com/400x200?text=Sem+Foto',
             endereco,
             telefone: telefone || ''
           };
 
-          if (indiceEdicao === null) {
-            // criação
-            comercios.push(novo);
-          } else {
-            // edição: atualizar o item existente
-            comercios[indiceEdicao] = novo;
-          }
+          // Obter botão de submit
+          const btnSubmit = modalForm.querySelector('button[type="submit"]');
 
           try {
-            localStorage.setItem('meus-comercios', JSON.stringify(comercios));
-          } catch (e) {
-            console.error('Erro ao salvar no localStorage:', e);
+            // Feedback visual: mostrar que está enviando
+            if (btnSubmit) {
+              btnSubmit.textContent = 'Enviando...';
+              btnSubmit.disabled = true;
+            }
+
+            let response;
+            
+            if (indiceEdicao === null) {
+              // Criar nova loja (POST)
+              response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(lojaData)
+              });
+            } else {
+              // Editar loja existente (PATCH)
+              response = await fetch(`${API_URL}/${indiceEdicao}`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(lojaData)
+              });
+            }
+
+            if (!response.ok) {
+              throw new Error(`Erro HTTP: ${response.status}`);
+            }
+
+            // Recarregar lista da API
+            await buscarLojas();
+
+            modal.classList.add('hidden');
+            modalForm.reset();
+
+            // reset estado de edição
+            indiceEdicao = null;
+            const title = document.getElementById('modal-title');
+            if (title) title.textContent = 'Cadastrar Nova Loja';
+
+            // Limpar imagem em Base64 e preview
+            imagemBase64 = '';
+            const previewContainer = document.getElementById('preview-container');
+            if (previewContainer) previewContainer.classList.add('hidden');
+
+            // mostrar notificação
+            mostrarNotificacao('Loja salva com sucesso!', 'sucesso');
+          } catch (error) {
+            console.error('Erro ao salvar loja:', error);
+            mostrarNotificacao('Erro ao salvar a loja.', 'erro');
+          } finally {
+            // Restaurar estado do botão em qualquer caso (sucesso ou erro)
+            if (btnSubmit) {
+              btnSubmit.textContent = 'Salvar';
+              btnSubmit.disabled = false;
+            }
           }
-          renderizarLojas(comercios);
-
-          modal.classList.add('hidden');
-          modalForm.reset();
-
-          // reset estado de edição
-          indiceEdicao = null;
-          const title = document.getElementById('modal-title');
-          if (title) title.textContent = 'Cadastrar Nova Loja';
-
-          // mostrar notificação
-          mostrarNotificacao('Loja salva com sucesso!', 'sucesso');
         });
       });
     </script>
@@ -540,8 +610,12 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">URL da Imagem</label>
-            <input type="text" name="imagem" class="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none" placeholder="https://..." />
+            <label class="block text-sm font-medium text-gray-700 mb-1">Foto da Loja</label>
+            <input type="file" id="input-foto" accept="image/*" class="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none" />
+          </div>
+
+          <div id="preview-container" class="hidden">
+            <img id="preview-imagem" class="h-24 object-cover rounded-md border border-gray-200" alt="Preview da foto" />
           </div>
 
           <div>
@@ -604,5 +678,18 @@
         </div>
       </div>
     </footer>
+
+    <!-- Script: Registrar Service Worker para PWA -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').then((registration) => {
+            console.log('Service Worker registrado com sucesso:', registration);
+          }).catch((error) => {
+            console.error('Erro ao registrar Service Worker:', error);
+          });
+        });
+      }
+    </script>
   </body>
 </html>

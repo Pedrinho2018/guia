@@ -1,0 +1,22 @@
+{
+  "comercios": [
+    {
+      "id": "1",
+      "nome": "Padaria Exemplo",
+      "categoria": "alimentacao",
+      "nota": 5,
+      "endereco": "Rua 1",
+      "img": "https://via.placeholder.com/300",
+      "telefone": "11999999999"
+    },
+    {
+      "id": "bd8b",
+      "nome": "lula",
+      "categoria": "Alimentação",
+      "nota": "5.0",
+      "imagem": "aaaaa",
+      "endereco": "aaaaa",
+      "telefone": "666666666666666666"
+    }
+  ]
+}
