@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GuiaLocal — Diretório de Comércio Local</title>
+    <!-- Google Font: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN (script) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Garantir que a fonte Inter seja aplicada no body */
+      body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+    </style>
+  </head>
+  <body class="antialiased bg-gray-50">
+    <!-- Navbar -->
+    <header class="bg-white shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <!-- Logo -->
+          <div class="flex-shrink-0">
+            <a href="#" class="text-blue-900 font-extrabold text-xl sm:text-2xl">GuiaLocal</a>
+          </div>
+
+          <!-- Links (visíveis em desktop, escondidos em mobile) -->
+          <nav class="hidden md:flex items-center space-x-8">
+            <a href="#" class="text-gray-700 hover:text-blue-900">Home</a>
+            <a href="#" class="text-gray-700 hover:text-blue-900">Categorias</a>
+            <a id="btn-cadastrar" href="#" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Cadastrar Loja</a>
+          </nav>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-20">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 class="text-3xl sm:text-4xl md:text-5xl font-extrabold">Descubra o melhor da sua cidade</h2>
+        <p class="mt-4 text-blue-100/90 max-w-2xl mx-auto">Encontre lojas, serviços e ofertas perto de você — rápido e fácil.</p>
+
+        <!-- Barra de pesquisa estilizada -->
+        <form id="search-form" class="mt-8 flex items-center justify-center" role="search" aria-label="Barra de busca principal">
+          <div class="flex w-full max-w-3xl shadow-lg rounded-lg overflow-hidden">
+            <input
+              id="search-input"
+              type="search"
+              name="q"
+              aria-label="O que você procura?"
+              placeholder="O que você procura? (ex: pizza, mecânico)"
+              class="flex-1 px-6 py-4 text-gray-700 placeholder-gray-400 bg-white focus:outline-none"
+            />
+            <button type="submit" class="bg-indigo-700 hover:bg-indigo-800 text-white px-6 py-4 flex items-center justify-center">
+              <!-- Ícone de lupa (SVG) -->
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 18.5a7.5 7.5 0 006.15-3.85z" />
+              </svg>
+              <span class="sr-only">Buscar</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Conteúdo de exemplo -->
+    <main class="py-10">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="text-3xl font-extrabold text-gray-900">Bem-vindo ao GuiaLocal</h1>
+        <p class="mt-4 text-gray-600">Encontre comércios locais, serviços e ofertas da sua cidade.</p>
+      </div>
+    </main>
+
+    <!-- Seção: Destaques da Semana -->
+    <section class="py-12">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h3 class="text-2xl font-extrabold text-gray-900">Destaques da Semana</h3>
+
+        <!-- Filtros -->
+        <div class="flex justify-center gap-4 my-8" id="filtros">
+          <button data-filter="Todos" class="rounded-full px-6 py-2 border border-gray-200 bg-white text-gray-700 transition-colors">Todos</button>
+          <button data-filter="Alimentação" class="rounded-full px-6 py-2 border border-gray-200 bg-white text-gray-700 transition-colors">Alimentação</button>
+          <button data-filter="Serviços" class="rounded-full px-6 py-2 border border-gray-200 bg-white text-gray-700 transition-colors">Serviços</button>
+          <button data-filter="Lazer" class="rounded-full px-6 py-2 border border-gray-200 bg-white text-gray-700 transition-colors">Lazer</button>
+        </div>
+
+        <div id="lojas-grid" class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8"></div>
+      </div>
+    </section>
+    
+    <!-- Script: renderização dinâmica das lojas -->
+    <script>
+      // Array de comércios: carregar do localStorage se existir, senão usar valores padrão
+      let comercios = (function() {
+        const chave = 'meus-comercios';
+        const saved = localStorage.getItem(chave);
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) return parsed;
+          } catch (e) {
+            console.error('Erro ao parsear meus-comercios do localStorage:', e);
+          }
+        }
+
+        // valores padrão caso não exista no localStorage
+        return [
+          {
+            nome: 'Pizzaria Central',
+            categoria: 'Restaurante',
+            nota: '4.8',
+            imagem: 'https://source.unsplash.com/800x600/?pizza',
+            endereco: 'Rua Exemplo, 123 — Centro, SuaCidade'
+          },
+          {
+            nome: 'Mecânica Rápida',
+            categoria: 'Serviços',
+            nota: '4.6',
+            imagem: 'https://source.unsplash.com/800x600/?mechanic,car',
+            endereco: 'Av. das Oficinas, 45 — Bairro Motor'
+          },
+          {
+            nome: 'Café do Bairro',
+            categoria: 'Cafeteria',
+            nota: '4.9',
+            imagem: 'https://source.unsplash.com/800x600/?cafe',
+            endereco: 'Praça Central, 10 — Centro'
+          },
+          {
+            nome: 'Flor & Aroma',
+            categoria: 'Florista',
+            nota: '4.7',
+            imagem: 'https://source.unsplash.com/800x600/?flowers,shop',
+            endereco: 'Rua das Flores, 77 — Jardim'
+          }
+        ];
+      })();
+
+      // Função que renderiza a lista de lojas no grid
+      function renderizarLojas(lista) {
+        const grid = document.getElementById('lojas-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        if (!lista || lista.length === 0) {
+          grid.innerHTML = '<div class="col-span-full text-center text-gray-500 py-12">Nenhuma loja encontrada com esse nome</div>';
+          return;
+        }
+
+        lista.forEach(c => {
+          // Determinar índice da loja no array principal (comercios)
+          const idx = comercios.indexOf(c);
+          const card = `
+            <article class="bg-white rounded-lg overflow-hidden shadow transition-shadow duration-200 hover:shadow-lg">
+              <div class="relative">
+                <img src="${c.imagem}" alt="${c.nome}" class="w-full h-48 object-cover">
+                <span class="absolute top-3 left-3 bg-white/90 text-indigo-700 text-xs font-semibold uppercase px-2 py-1 rounded">${c.categoria}</span>
+                <button onclick="deletarLoja(${idx})" class="absolute top-3 right-3 text-red-500 hover:text-red-700 bg-white/80 rounded-full px-2 py-1 text-sm" aria-label="Excluir loja">🗑️</button>
+              </div>
+
+              <div class="p-4">
+                <h4 class="text-lg font-bold text-gray-900">${c.nome}</h4>
+
+                <div class="mt-2 flex items-center space-x-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-yellow-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.95a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 00-.364 1.118l1.287 3.95c.3.92-.755 1.688-1.54 1.118l-3.37-2.448a1 1 0 00-1.176 0l-3.37 2.448c-.785.57-1.84-.197-1.54-1.118l1.287-3.95a1 1 0 00-.364-1.118L2.063 9.377c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.286-3.95z" />
+                  </svg>
+                  <span class="text-sm font-medium text-gray-800">${c.nota}</span>
+                </div>
+
+                <p class="mt-4 text-sm text-gray-500">${c.endereco}</p>
+              </div>
+            </article>
+          `;
+
+          grid.insertAdjacentHTML('beforeend', card);
+        });
+      }
+
+      // Função utilitária: map de filtros para categorias reais
+      const filtroParaCategorias = {
+        'Alimentação': ['Restaurante', 'Cafeteria', 'Padaria', 'Lanchonete'],
+        'Serviços': ['Serviços'],
+        'Lazer': ['Florista', 'Bar', 'Cinema', 'Parque']
+      };
+
+      // Renderizar ao carregar a página e configurar filtros
+      window.addEventListener('DOMContentLoaded', () => {
+        // Renderizar inicialmente todos
+        renderizarLojas(comercios);
+
+        // Configurar botões de filtro
+        const botoes = document.querySelectorAll('#filtros button');
+        if (!botoes) return;
+
+        // Destacar o botão 'Todos' inicialmente
+        const botaoTodos = document.querySelector('#filtros button[data-filter="Todos"]');
+        if (botaoTodos) {
+          botaoTodos.classList.add('bg-indigo-600', 'text-white', 'border-transparent');
+        }
+
+        botoes.forEach(btn => {
+          btn.addEventListener('click', () => {
+            // Remover destaque de todos e aplicar no clicado
+            botoes.forEach(b => b.classList.remove('bg-indigo-600', 'text-white', 'border-transparent'));
+            btn.classList.add('bg-indigo-600', 'text-white', 'border-transparent');
+
+            const filtro = btn.dataset.filter;
+            if (!filtro || filtro === 'Todos') {
+              renderizarLojas(comercios);
+              return;
+            }
+
+            // Determinar categorias correspondentes ao filtro
+            const cats = filtroParaCategorias[filtro] || [filtro];
+
+            const filtrados = comercios.filter(c => cats.includes(c.categoria));
+            renderizarLojas(filtrados);
+          });
+        });
+
+        // Conectar barra de pesquisa (busca por nome em tempo real)
+        const searchInput = document.getElementById('search-input');
+        const searchForm = document.getElementById('search-form');
+        if (searchForm) {
+          searchForm.addEventListener('submit', (e) => e.preventDefault());
+        }
+
+        if (searchInput) {
+          searchInput.addEventListener('input', (e) => {
+            const q = (e.target.value || '').trim().toLowerCase();
+
+            if (!q) {
+              // Se campo vazio, renderiza todos novamente
+              renderizarLojas(comercios);
+              return;
+            }
+
+            const resultado = comercios.filter(c => c.nome.toLowerCase().includes(q));
+            renderizarLojas(resultado);
+          });
+        }
+
+        // Modal: abrir/fechar quando clicar no botão da navbar ou no cancelar
+        const btnCadastrar = document.getElementById('btn-cadastrar');
+        const modal = document.getElementById('modal-cadastro');
+        const modalCancel = document.getElementById('modal-cancel');
+
+        if (btnCadastrar && modal) {
+          btnCadastrar.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            modal.classList.remove('hidden');
+          });
+        }
+
+        if (modalCancel && modal) {
+          modalCancel.addEventListener('click', () => {
+            modal.classList.add('hidden');
+          });
+        }
+
+        // Fechar modal ao clicar fora da caixa branca (no overlay)
+        if (modal) {
+          modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+              modal.classList.add('hidden');
+            }
+          });
+        }
+      });
+    </script>
+
+    <script>
+      // Função global para deletar uma loja pelo índice no array 'comercios'
+      function deletarLoja(index) {
+        if (typeof index !== 'number' || index < 0 || index >= comercios.length) return;
+        // remover do array
+        comercios.splice(index, 1);
+        // atualizar localStorage
+        try {
+          localStorage.setItem('meus-comercios', JSON.stringify(comercios));
+        } catch (e) {
+          console.error('Erro ao salvar no localStorage após exclusão:', e);
+        }
+        // re-renderizar
+        renderizarLojas(comercios);
+      }
+    </script>
+
+    <script>
+      // Handler adicional para o formulário do modal (seletor sem precisar alterar o HTML)
+      window.addEventListener('DOMContentLoaded', () => {
+        const modal = document.getElementById('modal-cadastro');
+        if (!modal) return;
+
+        const modalForm = modal.querySelector('form');
+        if (!modalForm) return;
+
+        modalForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+
+          const fd = new FormData(modalForm);
+          const nome = (fd.get('nome') || '').toString().trim();
+          const categoria = (fd.get('categoria') || '').toString().trim();
+          const imagem = (fd.get('imagem') || '').toString().trim();
+          const endereco = (fd.get('endereco') || '').toString().trim();
+
+          if (!nome) {
+            const primeiro = modalForm.querySelector('input[name="nome"]');
+            if (primeiro) primeiro.focus();
+            return;
+          }
+
+          const novo = {
+            nome,
+            categoria,
+            nota: '5.0',
+            imagem: imagem || 'https://source.unsplash.com/800x600/?store',
+            endereco
+          };
+
+          comercios.push(novo);
+          try {
+            localStorage.setItem('meus-comercios', JSON.stringify(comercios));
+          } catch (e) {
+            console.error('Erro ao salvar no localStorage:', e);
+          }
+          renderizarLojas(comercios);
+
+          modal.classList.add('hidden');
+          modalForm.reset();
+        });
+      });
+    </script>
+
+    <!-- Modal: Cadastrar Nova Loja (invisível por padrão) -->
+    <div id="modal-cadastro" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+      <div class="bg-white rounded-lg shadow-lg w-full max-w-lg mx-4">
+        <div class="px-6 py-4 border-b">
+          <h3 class="text-lg font-semibold text-gray-900">Cadastrar Nova Loja</h3>
+        </div>
+
+        <form class="px-6 py-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nome da Loja</label>
+            <input type="text" name="nome" class="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Nome da loja" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+            <select name="categoria" class="w-full border border-gray-200 rounded-md px-3 py-2 bg-white focus:outline-none">
+              <option>Alimentação</option>
+              <option>Serviços</option>
+              <option>Pets</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">URL da Imagem</label>
+            <input type="text" name="imagem" class="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none" placeholder="https://..." />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
+            <input type="text" name="endereco" class="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none" placeholder="Rua, número, bairro" />
+          </div>
+
+          <div class="pt-4 border-t flex justify-end gap-3">
+            <button id="modal-cancel" type="button" class="px-4 py-2 rounded-md bg-gray-200 text-gray-700">Cancelar</button>
+            <button type="submit" class="px-4 py-2 rounded-md bg-blue-600 text-white">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-gray-100">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div>
+            <a href="#" class="text-white font-extrabold text-xl">GuiaLocal</a>
+            <p class="mt-4 text-gray-300 text-sm">O seu diretório local para encontrar os melhores comércios, serviços e opções de lazer na sua cidade.</p>
+          </div>
+
+          <div>
+            <h4 class="text-white font-semibold mb-3">Links rápidos</h4>
+            <ul class="space-y-2 text-gray-300 text-sm">
+              <li><a href="#" class="hover:text-white">Sobre</a></li>
+              <li><a href="#" class="hover:text-white">Contato</a></li>
+              <li><a href="#" class="hover:text-white">Política de Privacidade</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 class="text-white font-semibold mb-3">Siga-nos</h4>
+            <div class="flex items-center space-x-4 text-gray-300">
+              <span class="hover:text-white">Twitter</span>
+              <span class="hover:text-white">Facebook</span>
+              <span class="hover:text-white">Instagram</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-sm text-gray-400">
+          Copyright 2024 - Guia da Cidade
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
